@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+import 'dotenv/config';
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -50,27 +50,39 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  const ytKey = process.env.YOUTUBE_API_KEY //add an API KEY locally bc Claude doesn't support env variables yet
   const maxResults = args.maxResults || 5;
 
   if (name === "search_learning_resources") {
     const topic = args.topic;
     try {
       // Example endpoint – replace with your real one
-      const url = `https://dev.to/api/articles/latest?tag=${encodeURIComponent(topic)}&per_page=${maxResults}`;
-      
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
-      }
+      const url_dev_to = `https://dev.to/api/articles/?tag=${encodeURIComponent(topic)}&per_page=${maxResults}`;
+      const url_you_tube = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(topic)}&type=video&maxResults=${maxResults}&key=${ytKey}`
 
-      const data = await response.json();
-      console.log("Fetched data:", data);
-      // Format the returned results
+      const [responseDev, responseYouTube ] = await Promise.all([
+        fetch(url_dev_to),
+        fetch(url_you_tube),
+      ]);
+      
+      if (!responseDev.ok) throw new Error(`Dev.to API failed: ${responseDev.status}`);
+      if (!responseYouTube.ok) throw new Error(`YouTube API failed: ${responseYouTube.status}`);
+
+      const [devtoData, youtubeData ] = await Promise.all([
+        responseDev.json(),
+        responseYouTube.json()
+      ]);
+
       const results = {
         topic,
-        articles: data.map((article) => ({
+        articles: devtoData.map((article) => ({
           title: article.title,
           url: article.url,
+        })),
+        videos: youtubeData.items.map((video) => ({
+          title: video.snippet.title,
+          description: video.snippet.description,
+          url:`https://www.youtube.com/watch?v=${video.id.videoId}`,
         })),
       };
 
@@ -105,7 +117,7 @@ async function main() {
     try {
         const transport = new StdioServerTransport();
         await server.connect(transport);
-        console.error("Server started and listening on stdio");
+        console.log("Server started and listening on stdio");
     } catch (error) {
         console.error("Failed to start server", error);
         process.exit(1);
