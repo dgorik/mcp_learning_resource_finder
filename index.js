@@ -50,12 +50,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
+  const maxResults = args.maxResults || 5;
 
   if (name === "search_learning_resources") {
     const topic = args.topic;
     try {
       // Example endpoint – replace with your real one
-      const url = `https://dev.to/api/articles/latest?tag=${encodeURIComponent(topic)}`;
+      const url = `https://dev.to/api/articles/latest?tag=${encodeURIComponent(topic)}&per_page=${maxResults}`;
       
       const response = await fetch(url);
       if (!response.ok) {
@@ -63,11 +64,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       const data = await response.json();
-
+      console.log("Fetched data:", data);
       // Format the returned results
       const results = {
         topic,
-        articles: data.slice(0,7).map((article) => ({
+        articles: data.map((article) => ({
           title: article.title,
           url: article.url,
         })),
