@@ -53,28 +53,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   if (name === "search_learning_resources") {
     const topic = args.topic;
-    const maxResults = args.maxResults || 5;
-
     try {
-      // For now, return mock data - we'll add real API calls next
+      // Example endpoint – replace with your real one
+      const url = `https://dev.to/api/articles/latest?tag=${encodeURIComponent(topic)}`;
+      
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Format the returned results
       const results = {
-        topic: topic,
-        videos: [
-          {
-            title: `${topic} - Complete Tutorial`,
-            channel: "Example Channel",
-            url: "https://youtube.com/watch?v=example",
-            views: "100K",
-          },
-        ],
-        articles: [
-          {
-            title: `Learn ${topic} - Comprehensive Guide`,
-            author: "Example Author",
-            url: "https://dev.to/example",
-            reactions: 150,
-          },
-        ],
+        topic,
+        articles: data.slice(0,7).map((article) => ({
+          title: article.title,
+          url: article.url,
+        })),
       };
 
       return {
@@ -85,12 +81,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           },
         ],
       };
+
     } catch (error) {
       return {
         content: [
           {
             type: "text",
-            text: `Error: ${error.message}`,
+            text: `Error fetching learning resources: ${error.message}`,
           },
         ],
         isError: true,
@@ -100,6 +97,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   throw new Error(`Unknown tool: ${name}`);
 });
+
 
 // Start the server
 async function main() {
