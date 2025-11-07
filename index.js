@@ -108,7 +108,7 @@ async function main() {
         await server.connect(transport);
         console.error("Server started and listening on stdio");
     } catch (error) {
-        console.error("Failed to start server: ooooops", error);
+        console.error("Failed to start server", error);
         process.exit(1);
     }
 }
